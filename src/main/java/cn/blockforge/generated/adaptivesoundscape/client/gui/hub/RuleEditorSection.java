@@ -47,6 +47,8 @@ final class RuleEditorSection extends Section {
     private int trackListTop;
     private int trackListBottom;
     private int visibleTrackRows = 3;
+    private int hintY;
+    private boolean hintVisible = true;
 
     @Override
     void build() {
@@ -69,15 +71,17 @@ final class RuleEditorSection extends Section {
         List<int[]> tabs = Ui.flow(w, 4, 20, 64, 64, 64);
         place(y, tabs, basic, condition, tracks);
 
-        int bottomRow = hub.contentY() + hub.contentH() - 22;
+        int bottom = hub.contentY() + hub.contentH();
+        int saveRow = bottom - 24;
         Button save = Button.builder(Component.translatable("z80z_adaptive_soundscape.ui.editor.save"), b -> save())
                 .bounds(0, 0, 10, 20).build();
         save.setTooltip(Tooltip.create(Component.translatable("z80z_adaptive_soundscape.ui.editor.save.tip")));
         Button cancel = Button.builder(Component.translatable("z80z_adaptive_soundscape.ui.editor.cancel"), b -> hub.exitEditor())
                 .bounds(0, 0, 10, 20).build();
         cancel.setTooltip(Tooltip.create(Component.translatable("z80z_adaptive_soundscape.ui.editor.cancel.tip")));
-        List<int[]> bottom = Ui.flow(w, 4, 20, 60, 60);
-        place(bottomRow, bottom, save, cancel);
+        List<int[]> bottomFlow = Ui.flow(w, 4, 20, 60, 60);
+        place(saveRow, bottomFlow, save, cancel);
+        hintY = saveRow - 13;
 
         switch (tab) {
             case BASIC -> buildBasic();
@@ -122,18 +126,19 @@ final class RuleEditorSection extends Section {
 
     private void buildBasic() {
         int w = hub.contentW();
-        int y0 = hub.contentY() + 26;
+        // 页签条占 [contentY, +20]，字段从 +32 起（标签在 +22，与页签完全脱离）
+        int y = hub.contentY() + 32;
         int halfWidth = (w - 10) / 2;
         EditBox id = field(idText, value -> idText = value, "z80z_adaptive_soundscape.ui.f.id",
                 "z80z_adaptive_soundscape.ui.f.id.tip");
         EditBox name = field(nameText, value -> nameText = value, "z80z_adaptive_soundscape.ui.f.name",
                 "z80z_adaptive_soundscape.ui.f.name.tip");
         List<int[]> row1 = Ui.flow(w, 4, 22, halfWidth, halfWidth);
-        label("z80z_adaptive_soundscape.ui.f.id", row1.get(0)[0], y0 - 9);
-        label("z80z_adaptive_soundscape.ui.f.name", row1.get(1)[0], y0 - 9);
-        place(y0, row1, id, name);
+        label("z80z_adaptive_soundscape.ui.f.id", row1.get(0)[0], y - 10);
+        label("z80z_adaptive_soundscape.ui.f.name", row1.get(1)[0], y - 10);
+        place(y, row1, id, name);
+        y += Ui.flowHeight(w, 4, 22, halfWidth, halfWidth) + 10;
 
-        int y1 = y0 + 30;
         List<int[]> row2 = Ui.flow(w, 4, 22, 64, 120, 100, 80);
         EditBox priority = field(priorityText, value -> priorityText = value, "z80z_adaptive_soundscape.ui.f.priority",
                 "z80z_adaptive_soundscape.ui.f.priority.tip");
@@ -149,15 +154,16 @@ final class RuleEditorSection extends Section {
         }, "z80z_adaptive_soundscape.ui.f.time.tip");
         Button enabled = Ui.toggle(I18n.get("z80z_adaptive_soundscape.ui.f.enabled"), () -> rule.enabled,
                 () -> rule.enabled = !rule.enabled);
-        label("z80z_adaptive_soundscape.ui.f.priority", row2.get(0)[0], y1 - 9);
-        place(y1, row2, priority, state, time, enabled);
+        label("z80z_adaptive_soundscape.ui.f.priority", row2.get(0)[0], y - 10);
+        place(y, row2, priority, state, time, enabled);
+        clampHint(y + Ui.flowHeight(w, 4, 22, 64, 120, 100, 80));
     }
 
     // ===== 条件页 =====
 
     private void buildCondition() {
         int w = hub.contentW();
-        int y0 = hub.contentY() + 26;
+        int y = hub.contentY() + 32;
         List<int[]> row1 = Ui.flow(w, 4, 22, 64, 74, 140);
         EditBox min = field(minText, value -> minText = value, "z80z_adaptive_soundscape.ui.f.min_enemies",
                 "z80z_adaptive_soundscape.ui.f.min_enemies.tip");
@@ -170,47 +176,87 @@ final class RuleEditorSection extends Section {
             rule.bossStage = cycle(rule.bossStage, MusicConfig.BossStage.values());
             return I18n.get(bossKey(rule.bossStage));
         }, "z80z_adaptive_soundscape.ui.f.boss.tip");
-        label("z80z_adaptive_soundscape.ui.f.min_enemies", row1.get(0)[0], y0 - 9);
-        label("z80z_adaptive_soundscape.ui.f.max_enemies", row1.get(1)[0], y0 - 9);
-        place(y0, row1, min, max, boss);
+        label("z80z_adaptive_soundscape.ui.f.min_enemies", row1.get(0)[0], y - 10);
+        label("z80z_adaptive_soundscape.ui.f.max_enemies", row1.get(1)[0], y - 10);
+        place(y, row1, min, max, boss);
+        y += Ui.flowHeight(w, 4, 22, 64, 74, 140) + 10;
 
         int pitch = 30;
-        int y1 = y0 + pitch;
         EditBox dimensions = field(dimensionText, value -> dimensionText = value, "z80z_adaptive_soundscape.ui.f.dims",
                 "z80z_adaptive_soundscape.ui.f.dims.tip");
-        label("z80z_adaptive_soundscape.ui.f.dims", 0, y1 - 9);
-        place(y1, single(w), dimensions);
+        label("z80z_adaptive_soundscape.ui.f.dims", 0, y - 10);
+        place(y, single(w), dimensions);
+        y += pitch;
 
-        int y2 = y1 + pitch;
         EditBox biomeIds = field(biomeText, value -> biomeText = value, "z80z_adaptive_soundscape.ui.f.biome_ids",
                 "z80z_adaptive_soundscape.ui.f.biome_ids.tip");
-        label("z80z_adaptive_soundscape.ui.f.biome_ids", 0, y2 - 9);
-        place(y2, single(w), biomeIds);
+        label("z80z_adaptive_soundscape.ui.f.biome_ids", 0, y - 10);
+        place(y, single(w), biomeIds);
+        y += pitch;
 
-        int y3 = y2 + pitch;
         EditBox biomeTags = field(tagText, value -> tagText = value, "z80z_adaptive_soundscape.ui.f.biome_tags",
                 "z80z_adaptive_soundscape.ui.f.biome_tags.tip");
-        label("z80z_adaptive_soundscape.ui.f.biome_tags", 0, y3 - 9);
-        place(y3, single(w), biomeTags);
+        label("z80z_adaptive_soundscape.ui.f.biome_tags", 0, y - 10);
+        place(y, single(w), biomeTags);
+        clampHint(y + 20);
     }
 
-    // ===== 曲目页 =====
+    // ===== 曲目页（自底向上逐级降级，永不越界） =====
 
     private void buildTracks() {
         int w = hub.contentW();
-        int usable = hub.contentH() - 26 - 28;
-        int listHeight = Math.max(28, Math.min(72, usable - 30 - 28 - 26 - 8));
-        trackListTop = hub.contentY() + 26;
-        trackListBottom = trackListTop + listHeight;
-        visibleTrackRows = Math.max(1, (listHeight - 2) / TRACK_ROW_HEIGHT);
+        int contentBottom = hub.contentY() + hub.contentH();
+        int contentTop = hub.contentY() + 32;
+        int[] opsWidths = {118, 54, 54, 54, 26, 26};
+        int opsH = Ui.flowHeight(w, 4, 22, opsWidths);
 
-        int y = trackListBottom + 12;
+        // 三档间距逐级收紧；每档先尝试带提示行再尝试去掉；列表最小高度 28（末档 24）
+        int[] gapTier = {8, 6, 4};
+        int soundBlock = 30;   // 标签 10 + 输入框 20
+        int propsBlock = 30;
+        int saveBlock = 24;
+        int hintBlock = 17;
+        boolean placed = false;
+        hintVisible = false;
+        for (int tier = 0; tier < 3 && !placed; tier++) {
+            int minList = tier < 2 ? 28 : 24;
+            for (boolean withHint : new boolean[]{true, false}) {
+                int total = 32 + minList + gapTier[tier] + soundBlock + gapTier[tier]
+                        + propsBlock + gapTier[tier] + opsH + (withHint ? hintBlock : 4) + saveBlock;
+                if (total > hub.contentH()) continue;
+                hintVisible = withHint;
+                int opsTop = contentBottom - saveBlock - (withHint ? hintBlock : 4) - opsH;
+                int propsY = opsTop - gapTier[tier] - propsBlock;
+                int soundY = propsY - gapTier[tier] - soundBlock;
+                int listBottom = soundY - gapTier[tier];
+                placeTracksContent(contentTop, listBottom, minList, soundY, propsY, opsTop, opsH, opsWidths);
+                placed = true;
+                break;
+            }
+        }
+        if (!placed) {
+            // 极端兜底：最小列表 + 最紧间距，无提示
+            int opsTop = contentBottom - saveBlock - 4 - opsH;
+            int propsY = opsTop - 2 - propsBlock;
+            int soundY = propsY - 2 - soundBlock;
+            hintVisible = false;
+            placeTracksContent(contentTop, soundY - 2, 24, soundY, propsY, opsTop, opsH, opsWidths);
+        }
+    }
+
+    private void placeTracksContent(int contentTop, int listBottom, int minList, int soundY, int propsY,
+                                    int opsTop, int opsH, int[] opsWidths) {
+        int w = hub.contentW();
+        int listH = Math.max(minList, Math.min(72, listBottom - contentTop));
+        trackListTop = contentTop;
+        trackListBottom = contentTop + listH;
+        visibleTrackRows = Math.max(1, (listH - 2) / TRACK_ROW_HEIGHT);
+
         soundBox = field(soundDraft, value -> soundDraft = value, "z80z_adaptive_soundscape.ui.f.sound",
                 "z80z_adaptive_soundscape.ui.f.sound.tip");
-        label("z80z_adaptive_soundscape.ui.f.sound", 0, y - 9);
-        place(y, single(w), soundBox);
+        label("z80z_adaptive_soundscape.ui.f.sound", 0, soundY - 10);
+        place(soundY, single(w), soundBox);
 
-        int y1 = y + 30;
         List<int[]> row = Ui.flow(w, 4, 22, 50, 50, 78, 54, 40);
         weightBox = field(weightDraft, value -> weightDraft = value, "z80z_adaptive_soundscape.ui.f.weight",
                 "z80z_adaptive_soundscape.ui.f.weight.tip");
@@ -231,11 +277,10 @@ final class RuleEditorSection extends Section {
             commitTrackEditor();
         }).bounds(0, 0, 10, 20).build();
         follow.setTooltip(Tooltip.create(Component.translatable("z80z_adaptive_soundscape.ui.f.follow.tip")));
-        label("z80z_adaptive_soundscape.ui.f.weight", row.get(0)[0], y1 - 9);
-        label("z80z_adaptive_soundscape.ui.f.volume", row.get(1)[0], y1 - 9);
-        place(y1, row, weightBox, volumeBox, loop, preview, follow);
+        label("z80z_adaptive_soundscape.ui.f.weight", row.get(0)[0], propsY - 10);
+        label("z80z_adaptive_soundscape.ui.f.volume", row.get(1)[0], propsY - 10);
+        place(propsY, row, weightBox, volumeBox, loop, preview, follow);
 
-        int y2 = y1 + 26;
         Button choose = Button.builder(Component.translatable("z80z_adaptive_soundscape.ui.editor.choose"), b -> chooseFromLibrary())
                 .bounds(0, 0, 10, 20).build();
         choose.setTooltip(Tooltip.create(Component.translatable("z80z_adaptive_soundscape.ui.editor.choose.tip")));
@@ -247,8 +292,13 @@ final class RuleEditorSection extends Section {
                 .bounds(0, 0, 10, 20).build();
         Button up = Button.builder(Component.literal("↑"), b -> moveTrack(-1)).bounds(0, 0, 10, 20).build();
         Button down = Button.builder(Component.literal("↓"), b -> moveTrack(1)).bounds(0, 0, 10, 20).build();
-        List<int[]> ops = Ui.flow(w, 4, 22, 118, 54, 54, 54, 26, 26);
-        place(y2, ops, choose, add, copy, remove, up, down);
+        List<int[]> ops = Ui.flow(w, 4, 22, opsWidths);
+        place(opsTop, ops, choose, add, copy, remove, up, down);
+    }
+
+    /** 基础/条件页用：提示行仅在最后元素下方仍有空间时显示。 */
+    private void clampHint(int lastElementBottom) {
+        hintVisible = lastElementBottom + 6 <= hintY;
     }
 
     // ===== 渲染 =====
@@ -303,9 +353,10 @@ final class RuleEditorSection extends Section {
 
     @Override
     void renderLate(GuiGraphics graphics, int mouseX, int mouseY) {
+        if (!hintVisible) return;
         int w = hub.contentW();
         graphics.drawCenteredString(hub.font(), Ui.trunc(hub.font(), tracksHint(), w),
-                hub.contentX() + w / 2, hub.contentY() + hub.contentH() - 40, Ui.MUTED_COLOR);
+                hub.contentX() + w / 2, hintY, Ui.MUTED_COLOR);
     }
 
     private String tracksHint() {

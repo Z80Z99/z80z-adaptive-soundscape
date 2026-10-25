@@ -121,6 +121,12 @@ public final class Ui {
         return width;
     }
 
+    /** flow 的实际占用高度（感知换行），供游标式布局推进下一行 y。 */
+    public static int flowHeight(int maxWidth, int gap, int rowHeight, int... widths) {
+        List<int[]> placed = flow(maxWidth, gap, rowHeight, widths);
+        return placed.isEmpty() ? 0 : placed.get(placed.size() - 1)[1] + rowHeight;
+    }
+
     public static Predicate<String> numberFilter() {
         return value -> value.isEmpty() || value.matches("-?\\d{0,9}(\\.\\d{0,4})?");
     }

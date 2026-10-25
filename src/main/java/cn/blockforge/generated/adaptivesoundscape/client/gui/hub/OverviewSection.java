@@ -22,14 +22,15 @@ final class OverviewSection extends Section {
     private int libraryCardY;
     private boolean rulesCardHover;
     private boolean libraryCardHover;
+    private boolean cardsFit = true;
 
     @Override
     void build() {
         MusicConfig config = ConfigManager.get();
-        int y = hub.contentY();
         int w = hub.contentW();
+        // 游标式布局：每行按 flow 实际高度（感知换行）推进，杜绝换行后与后续元素重叠
+        int y = hub.contentY() + 64;
 
-        int toggleY = y + 64;
         Button mod = Ui.toggle(I18n.get("z80z_adaptive_soundscape.ui.toggle.mod"), () -> config.enabled, () -> {
             config.enabled = !config.enabled;
             ConfigManager.save();
@@ -52,10 +53,11 @@ final class OverviewSection extends Section {
             ConfigManager.save();
         });
         notes.setTooltip(Tooltip.create(Component.translatable("z80z_adaptive_soundscape.ui.toggle.notes.tip")));
-        List<int[]> toggleFlow = Ui.flow(w, 4, 22, 74, 92, 74, 74);
-        place(toggleY, toggleFlow, mod, vanilla, glow, notes);
+        int[] toggleWidths = {74, 92, 74, 74};
+        List<int[]> toggleFlow = Ui.flow(w, 4, 22, toggleWidths);
+        place(y, toggleFlow, mod, vanilla, glow, notes);
+        y += Ui.flowHeight(w, 4, 22, toggleWidths) + 8;
 
-        int presetY = toggleY + toggleFlow.get(toggleFlow.size() - 1)[1] + 26;
         Button combat = Button.builder(Component.translatable("z80z_adaptive_soundscape.ui.preset.combat"), b -> preset("combat"))
                 .bounds(0, 0, 10, 20).build();
         combat.setTooltip(Tooltip.create(Component.translatable("z80z_adaptive_soundscape.ui.preset.combat.tip")));
@@ -68,13 +70,16 @@ final class OverviewSection extends Section {
         Button scan = Button.builder(Component.translatable("z80z_adaptive_soundscape.ui.rescan"), b -> scan())
                 .bounds(0, 0, 10, 20).build();
         scan.setTooltip(Tooltip.create(Component.translatable("z80z_adaptive_soundscape.ui.rescan.tip")));
-        List<int[]> presetFlow = Ui.flow(w, 4, 22, 50, 50, 50, 84);
-        place(presetY, presetFlow, combat, balanced, relaxed, scan);
+        int[] presetWidths = {50, 50, 50, 84};
+        List<int[]> presetFlow = Ui.flow(w, 4, 22, presetWidths);
+        place(y, presetFlow, combat, balanced, relaxed, scan);
+        y += Ui.flowHeight(w, 4, 22, presetWidths) + 12;
 
         cardW = (w - 10) / 2;
         rulesCardX = hub.contentX();
         libraryCardX = rulesCardX + cardW + 10;
-        rulesCardY = libraryCardY = presetY + 34;
+        rulesCardY = libraryCardY = y;
+        cardsFit = rulesCardY + cardH <= hub.contentY() + hub.contentH() - 4;
     }
 
     @Override
@@ -102,8 +107,13 @@ final class OverviewSection extends Section {
         bx += badge(graphics, "z80z_adaptive_soundscape.ui.ctx.enemies", snapshot.enemies(), bx, badgeY) + 4;
         badge(graphics, "z80z_adaptive_soundscape.ui.ctx.boss", snapshot.boss(), bx, badgeY);
 
-        renderStatCard(graphics, mouseX, mouseY, rulesCardX, rulesCardY, true);
-        renderStatCard(graphics, mouseX, mouseY, libraryCardX, libraryCardY, false);
+        if (cardsFit) {
+            renderStatCard(graphics, mouseX, mouseY, rulesCardX, rulesCardY, true);
+            renderStatCard(graphics, mouseX, mouseY, libraryCardX, libraryCardY, false);
+        } else {
+            rulesCardHover = false;
+            libraryCardHover = false;
+        }
     }
 
     private int badge(GuiGraphics graphics, String labelKey, String value, int x, int y) {

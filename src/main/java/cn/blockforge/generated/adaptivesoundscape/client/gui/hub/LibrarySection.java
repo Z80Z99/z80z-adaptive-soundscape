@@ -30,11 +30,17 @@ final class LibrarySection extends Section {
     void build() {
         int x = hub.contentX();
         int w = hub.contentW();
-        int buttonRow = hub.contentY() + hub.contentH() - 22;
-        int slider2 = hub.contentY() + hub.contentH() - 46;
-        int slider1 = hub.contentY() + hub.contentH() - 70;
+        // 自底向上：按钮行（感知换行）→ 双滑条 → 列表吃剩余空间，任何换行都不会压到滑条
+        int bottom = hub.contentY() + hub.contentH();
+        int[] widths = hub.isPicking()
+                ? new int[]{60, 60, 50, 50, 74}
+                : new int[]{60, 50, 50, 60};
+        int buttonsHeight = Ui.flowHeight(w, 4, 22, widths);
+        int buttonsTop = bottom - Math.max(22, buttonsHeight + 2);
+        int slider2Y = buttonsTop - 24;
+        int slider1Y = slider2Y - 24;
         listTop = hub.contentY() + 2;
-        listBottom = slider1 - 8;
+        listBottom = slider1Y - 8;
 
         Button preview = Button.builder(Component.translatable("z80z_adaptive_soundscape.ui.lib.preview"), b -> previewSelected())
                 .bounds(0, 0, 10, 20).build();
@@ -56,9 +62,7 @@ final class LibrarySection extends Section {
             back = Button.builder(Component.translatable("z80z_adaptive_soundscape.ui.lib.cancel_pick"), b -> hub.cancelPicker())
                     .bounds(0, 0, 10, 20).build();
         }
-        List<int[]> flow = use == null
-                ? Ui.flow(w, 4, 22, 60, 50, 50, 60)
-                : Ui.flow(w, 4, 22, 60, 60, 50, 50, 74);
+        List<int[]> flow = Ui.flow(w, 4, 22, widths);
         int index = 0;
         for (int[] position : flow) {
             Button button = switch (index) {
@@ -70,16 +74,16 @@ final class LibrarySection extends Section {
             };
             if (button == null) break;
             button.setX(x + position[0]);
-            button.setY(buttonRow + position[1]);
+            button.setY(buttonsTop + position[1]);
             button.setWidth(position[2]);
             hub.addWidget(button);
             index++;
         }
 
-        totalSlider = new TotalVolumeSlider(x + w / 2 - 80, slider2, 160);
+        totalSlider = new TotalVolumeSlider(x + w / 2 - 80, slider2Y, 160);
         totalSlider.setTooltip(Tooltip.create(Component.translatable("z80z_adaptive_soundscape.ui.lib.total_volume.tip")));
         hub.addWidget(totalSlider);
-        PreviewVolumeSlider previewSlider = new PreviewVolumeSlider(x + w / 2 - 80, slider1, 160);
+        PreviewVolumeSlider previewSlider = new PreviewVolumeSlider(x + w / 2 - 80, slider1Y, 160);
         previewSlider.setTooltip(Tooltip.create(Component.translatable("z80z_adaptive_soundscape.ui.lib.preview_volume.tip")));
         hub.addWidget(previewSlider);
     }

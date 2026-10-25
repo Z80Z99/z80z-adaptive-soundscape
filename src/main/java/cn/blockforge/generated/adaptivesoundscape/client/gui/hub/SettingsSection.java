@@ -38,6 +38,8 @@ final class SettingsSection extends Section {
     private final String[] drafts = new String[8];
     private boolean loaded;
     private final List<Row> rows = new ArrayList<>();
+    private int scroll;
+    private int maxScroll;
 
     @Override
     void build() {
@@ -114,13 +116,44 @@ final class SettingsSection extends Section {
             button.setWidth(position[2]);
             hub.addWidget(button);
         }
+
+        int contentBottomLimit = buttonRow - 8;
+        int contentHeight = rows.isEmpty() ? 0 : rows.get(rows.size() - 1).y + 30 - hub.contentY();
+        maxScroll = Math.max(0, contentHeight - (contentBottomLimit - hub.contentY()));
+        scroll = Math.min(scroll, maxScroll);
+        applyScroll(contentBottomLimit);
+    }
+
+    private void applyScroll(int limit) {
+        for (Row row : rows) {
+            int labelY = row.y - scroll;
+            int boxY = row.y + 10 - scroll;
+            row.box.setY(boxY);
+            row.box.visible = labelY >= hub.contentY() - 2 && boxY + 20 <= limit + 2;
+        }
+    }
+
+    @Override
+    boolean mouseScrolled(double mouseX, double mouseY, double delta) {
+        if (maxScroll > 0 && mouseX >= hub.contentX() && mouseX <= hub.contentX() + hub.contentW()) {
+            scroll = Math.max(0, Math.min(maxScroll, scroll - (int) Math.signum(delta)));
+            applyScroll(hub.contentY() + hub.contentH() - 30);
+            return true;
+        }
+        return false;
     }
 
     @Override
     void render(GuiGraphics graphics, int mouseX, int mouseY) {
         for (Row row : rows) {
+            int labelY = row.y - scroll;
+            if (labelY < hub.contentY() - 2 || labelY > hub.contentY() + hub.contentH() - 30) continue;
             graphics.drawString(hub.font(), I18n.get(labelKey(row.index)),
-                    hub.contentX() + row.x, row.y, Ui.MUTED_COLOR, false);
+                    hub.contentX() + row.x, labelY, Ui.MUTED_COLOR, false);
+        }
+        if (maxScroll > 0) {
+            Ui.scrollbar(graphics, hub.contentX() + hub.contentW() - 5, hub.contentY(),
+                    hub.contentH() - 30, rows.size() + 1, Math.max(1, (hub.contentH() - 30) / 32), scroll / 32);
         }
     }
 

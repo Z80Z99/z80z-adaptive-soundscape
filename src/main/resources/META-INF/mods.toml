@@ -1,0 +1,24 @@
+modLoader="javafml"
+loaderVersion="[47,)"
+license="MIT"
+[[mods]]
+modId="${mod_id}"
+version="${mod_version}"
+displayName="${mod_name}"
+authors="Z80Z99"
+displayTest="IGNORE_ALL_VERSION"
+description='''
+Z80Z Adaptive Soundscape - a client-side dynamic music mod for Minecraft 1.20.1 Forge. Picks background music by biome, day/night, nearby enemy count, locked-on targets and boss phases, with priority rules, weighted random tracks, a 3-state explore/alert/combat machine, equal-power crossfades, drag-and-drop music library (OGG/MP3/WAV/FLAC), two-layer volume calibration and an in-game hub UI.
+'''
+[[dependencies.${mod_id}]]
+modId="forge"
+mandatory=true
+versionRange="[47,)"
+ordering="NONE"
+side="BOTH"
+[[dependencies.${mod_id}]]
+modId="minecraft"
+mandatory=true
+versionRange="[${minecraft_version}]"
+ordering="NONE"
+side="BOTH"
